@@ -135,6 +135,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
     JTextField                m_tfRemoveWord;
     JTextField                m_tfShowTag;
     JTextField                m_tfRemoveTag;
+    JComboBox                m_jcPackageTag;
     JTextField                m_tfShowPid;
     JTextField                m_tfShowTid;
     
@@ -150,6 +151,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
     JCheckBox                 m_chkEnableRemove;
     JCheckBox                 m_chkEnableShowTag;
     JCheckBox                 m_chkEnableRemoveTag;
+    JCheckBox                 m_chkEnablePackageTag;
     JCheckBox                 m_chkEnableShowPid;
     JCheckBox                 m_chkEnableShowTid;
     JCheckBox                 m_chkEnableHighlight;
@@ -322,6 +324,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
     final String INI_WORD_REMOVE    = "WORD_REMOVE";
     final String INI_TAG_SHOW       = "TAG_SHOW";
     final String INI_TAG_REMOVE     = "TAG_REMOVE";
+    final String INI_TAG_PACKAGE     = "TAG_PACKAGE";
     final String INI_HIGHLIGHT      = "HIGHLIGHT";
     final String INI_PID_SHOW       = "PID_SHOW";
     final String INI_TID_SHOW       = "TID_SHOW";
@@ -811,12 +814,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
         m_chkEnableRemove       = new JCheckBox();
         m_chkEnableShowTag      = new JCheckBox();
         m_chkEnableRemoveTag    = new JCheckBox();
+	m_chkEnablePackageTag    = new JCheckBox();
         m_chkEnableShowPid      = new JCheckBox();
         m_chkEnableShowTid      = new JCheckBox();
         m_chkEnableFind.setSelected(true);
         m_chkEnableRemove.setSelected(true);
         m_chkEnableShowTag.setSelected(true);
         m_chkEnableRemoveTag.setSelected(true);
+	m_chkEnablePackageTag.setSelected(true);
         m_chkEnableShowPid.setSelected(true);
         m_chkEnableShowTid.setSelected(true);
 
@@ -824,6 +829,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
         m_tfRemoveWord  = new JTextField();
         m_tfShowTag     = new JTextField();
         m_tfRemoveTag   = new JTextField();
+	m_jcPackageTag = new JComboBox();
         m_tfShowPid     = new JTextField();
         m_tfShowTid     = new JTextField();
 
@@ -882,10 +888,21 @@ public class LogFilterMain extends JFrame implements INotiEvent
         jpRemoveTag.add(m_tfRemoveTag, BorderLayout.CENTER);
         jpRemoveTag.add(m_chkEnableRemoveTag, BorderLayout.EAST);
 
+	JPanel jpPackage = new JPanel(new BorderLayout());
+	JLabel packageTag = new JLabel();
+	packageTag.setText("package : ");
+	m_jcPackageTag.addItem("com.viewpager2example");
+	m_jcPackageTag.addItem("system_server");
+	m_jcPackageTag.addItem("com.android.systemui");
+	m_jcPackageTag.addActionListener(m_alButtonListener);
+	jpPackage.add(packageTag, BorderLayout.WEST);
+	jpPackage.add(m_jcPackageTag, BorderLayout.CENTER);
+	jpPackage.add(m_chkEnablePackageTag, BorderLayout.EAST);
         jpTagFilter.add(jpPid);
         jpTagFilter.add(jpTid);
         jpTagFilter.add(jpShow);
         jpTagFilter.add(jpRemoveTag);
+	jpTagFilter.add(jpPackage);
 
         jpMain.add(jpTagFilter, BorderLayout.CENTER);
 
@@ -1358,6 +1375,35 @@ public class LogFilterMain extends JFrame implements INotiEvent
         runFilter();
     }
 
+    void findPackageAndSetPid(JComboBox comboBox, JCheckBox checkBox) {
+	if(checkBox.isSelected()) {
+	    String pid = getPidFromPackage((String)m_jcPackageTag.getSelectedItem());  // find package
+	    if (pid != null)
+		    m_tfShowPid.setText(pid);
+	}
+    }
+    String getPidFromPackage(String pkg)
+    {
+        String pid = null;
+	try
+	    {
+		String s;
+		String strCommand = "adb shell pidof " + pkg;
+		Process oProcess = Runtime.getRuntime().exec(strCommand);
+		BufferedReader stdOut   = new BufferedReader(new InputStreamReader(oProcess.getInputStream()));
+		BufferedReader stdError = new BufferedReader(new InputStreamReader(oProcess.getErrorStream()));
+		s = stdOut.readLine();
+		s.trim();
+		pid = s;
+		System.out.println("Exit Code: " + oProcess.exitValue());
+	    }
+	catch(Exception e)
+	    {
+		T.e("e = " + e);
+	    }
+    T.d("pid of " + pkg + " = " + pid);
+    return pid;
+    }
     void setProcessBtn(boolean bStart)
     {
         if(bStart)
@@ -1895,6 +1941,8 @@ public class LogFilterMain extends JFrame implements INotiEvent
                 m_tbLogTable.setFont(new Font((String)m_jcFontType.getSelectedItem(), Font.PLAIN, 12));
                 m_tbLogTable.setFontSize(Integer.parseInt(m_tfFontSize.getText()));
             }
+		else if (e.getSource().equals(m_jcPackageTag))
+		    findPackageAndSetPid(m_jcPackageTag, m_chkEnablePackageTag);
         }
     };
 
